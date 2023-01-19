@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const User = require("./models/users.model");
+const Post = require("./models/posts.model");
+const Comment = require("./models/comments.model");
 
 mongoose
   .connect(process.env.MONGODB_URL)
@@ -82,6 +84,9 @@ router.get("/addUsers", (req, res) => {
       following: [],
       posts: [],
       postsLiked: [],
+      posts: [],
+      comments: [],
+      likedPosts: [],
     },
     {
       email: "aaaaaaaaaaaa@gmail.com",
@@ -90,6 +95,9 @@ router.get("/addUsers", (req, res) => {
       following: [],
       posts: [],
       postsLiked: [],
+      posts: [],
+      comments: [],
+      likedPosts: [],
     },
     {
       email: "qqqqqqqqqqqq@gmail.com",
@@ -98,6 +106,9 @@ router.get("/addUsers", (req, res) => {
       following: [],
       posts: [],
       postsLiked: [],
+      posts: [],
+      comments: [],
+      likedPosts: [],
     },
     {
       email: "qweqweqweqwe@gmail.com",
@@ -106,6 +117,9 @@ router.get("/addUsers", (req, res) => {
       following: [],
       posts: [],
       postsLiked: [],
+      posts: [],
+      comments: [],
+      likedPosts: [],
     },
     {
       email: "werwerwerwer@gmail.com",
@@ -114,6 +128,9 @@ router.get("/addUsers", (req, res) => {
       following: [],
       posts: [],
       postsLiked: [],
+      posts: [],
+      comments: [],
+      likedPosts: [],
     },
     {
       email: "asdasdasdasd@gmail.com",
@@ -122,6 +139,9 @@ router.get("/addUsers", (req, res) => {
       following: [],
       posts: [],
       postsLiked: [],
+      posts: [],
+      comments: [],
+      likedPosts: [],
     },
   ];
   User.insertMany(data)
@@ -180,45 +200,342 @@ router.get("/follow/:id", async (req, res) => {
 router.get("/unfollow/:id", async (req, res) => {
   // current user follows user with Id as id
   console.log(req.body.token);
-  getAuth(req.body.token).then((auth) => {
-    console.log("Auth: ", auth);
-    if (auth.status !== "Successfully Verified") {
-      return res.status(401).send("Authentication Error!");
-    }
-    const id = req.params.id;
-    const currentId = auth.id;
-
-    var currentFollowing = 0,
-      currentFollowedBy = 0;
-
-    User.findOne({ _id: id }, (err, user) => {
-      if (err) return res.status(404).send("Error occured: " + err);
-      if (user) {
-        console.log(user);
-        console.log(typeof user.followedBy);
-        if (user.followedBy.includes(currentId)) {
-          user.followedBy.splice(user.followedBy.indexOf(currentId), 1);
-        }
-        user.save();
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
       }
-    });
-    User.findOne({ _id: currentId }, (err, user) => {
-      if (err) return res.status(404).send("Error occured: " + err);
-      if (user) {
-        if (user.following.includes(id)) {
-          user.following.splice(user.following.indexOf(id), 1);
+      const id = req.params.id;
+      const currentId = auth.id;
+
+      var currentFollowing = 0,
+        currentFollowedBy = 0;
+
+      User.findOne({ _id: id }, (err, user) => {
+        if (err) return res.status(404).send("Error occured: " + err);
+        if (user) {
+          console.log(user);
+          console.log(typeof user.followedBy);
+          if (user.followedBy.includes(currentId)) {
+            user.followedBy.splice(user.followedBy.indexOf(currentId), 1);
+          }
+          user.save();
         }
-        currentFollowing = user.following.length;
-        currentFollowedBy = user.followedBy.length;
-        user.save();
-        return res.json({
-          following: currentFollowing,
-          followedBy: currentFollowedBy,
-          userFollowed: true,
+      });
+      User.findOne({ _id: currentId }, (err, user) => {
+        if (err) return res.status(404).send("Error occured: " + err);
+        if (user) {
+          if (user.following.includes(id)) {
+            user.following.splice(user.following.indexOf(id), 1);
+          }
+          currentFollowing = user.following.length;
+          currentFollowedBy = user.followedBy.length;
+          user.save();
+          return res.json({
+            following: currentFollowing,
+            followedBy: currentFollowedBy,
+            userFollowed: true,
+          });
+        }
+      });
+    })
+    .catch((err) => {
+      return res.status(500).send("Error occured: " + err);
+    });
+});
+
+router.post("/posts", (req, res) => {
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
+      }
+      title = req.body.title;
+      description = req.body.description;
+      if (!title || !description) return res.send("No proper details provided");
+      Post.create({
+        createdBy: auth.id,
+        title: title,
+        description: description,
+        createdAt: new Date(),
+        likes: 0,
+      }).then((result) => {
+        console.log("rerererer", result);
+        User.findOne({ _id: auth.id })
+          .then((user) => {
+            console.log("results", user);
+            user.posts = [...user.posts, result._id.toString()];
+            user.save();
+            return res.json({
+              id: result._id.toString(),
+              createdAt: result.createdAt,
+              title: result.title,
+              description: result.description,
+            });
+          })
+          .catch((err) => {
+            console.log(err);
+            return res.send(err);
+          });
+      });
+    })
+    .catch((err) => {
+      return res.status(500).send("Authentication Error");
+    });
+});
+
+router.delete("/posts/:id", (req, res) => {
+  id = req.params.id;
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
+      }
+      Post.findByIdAndDelete({
+        _id: id,
+      }).then((result) => {
+        console.log("asjhfdashjf", result);
+        User.findOne({ _id: auth.id })
+          .then((user) => {
+            console.log("results", user);
+            if (user.posts.includes(result.id)) {
+              user.posts.splice(user.posts.indexOf(result.id), 1);
+            }
+            user.save();
+            return res.send(
+              "Post with id: " + result.id + " removed Successfully"
+            );
+          })
+          .catch((err) => {
+            console.log(err);
+            return res.send(err);
+          });
+      });
+    })
+    .catch((err) => {
+      return res.status(500).send("Authentication Error");
+    });
+});
+
+router.post("/like/:id", (req, res) => {
+  id = req.params.id;
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
+      }
+      User.findOne({ _id: auth.id })
+        .then((user) => {
+          if (!user.posts.includes(id) && !user.likedPosts.includes(id)) {
+            user.likedPosts = [...user.likedPosts, id];
+            user.save();
+            Post.findOne({ _id: id })
+              .then((result) => {
+                result.likes++;
+                result.save();
+                return res.json({
+                  id: result._id.toString(),
+                  createdAt: result.createdAt,
+                  title: result.title,
+                  description: result.description,
+                  likes: result.likes,
+                });
+              })
+              .catch((err) => {
+                console.log(err);
+                return res.send(err);
+              });
+          } else {
+            return res.send("Post already liked or it's your own post");
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          return res.send(err);
         });
-      }
+    })
+    .catch((err) => {
+      return res.status(500).send("Authentication Error");
     });
-  });
+});
+
+router.post("/unlike/:id", (req, res) => {
+  id = req.params.id;
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
+      }
+      User.findOne({ _id: auth.id })
+        .then((user) => {
+          if (user.likedPosts.includes(id)) {
+            user.likedPosts.splice(user.likedPosts.indexOf(id), 1);
+            user.save();
+            Post.findOne({ _id: id })
+              .then((result) => {
+                result.likes--;
+                result.save();
+                return res.json({
+                  id: result._id.toString(),
+                  createdAt: result.createdAt,
+                  title: result.title,
+                  description: result.description,
+                  likes: result.likes,
+                });
+              })
+              .catch((err) => {
+                console.log(err);
+                return res.send(err);
+              });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          return res.send(err);
+        });
+    })
+    .catch((err) => {
+      return res.status(500).send("Authentication Error");
+    });
+});
+
+// id = req.params.id;
+//   getAuth(req.body.token)
+//     .then((auth) => {
+//       console.log("Auth: ", auth);
+//       if (auth.status !== "Successfully Verified") {
+//         return res.status(401).send("Authentication Error!");
+//       }
+
+//     })
+//     .catch((err) => {
+//       return res.status(500).send("Authentication Error");
+//     });
+
+router.post("/comment/:id", (req, res) => {
+  id = req.params.id;
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
+      }
+      title = req.body.title;
+      description = req.body.description;
+      if (!title || !description) return res.send("No proper details provided");
+      Comment.create({
+        createdBy: auth.id,
+        createdFor: id,
+        title: title,
+        description: description,
+        createdAt: new Date(),
+      })
+        .then((comment) => {
+          Post.findOne({ _id: id })
+            .then((post) => {
+              post.comments = [...post.comments, comment._id.toString()];
+              post.save();
+              User.findOne({ _id: auth.id })
+                .then((user) => {
+                  user.comments = [...user.comments, comment._id.toString()];
+                  user.save();
+                  return res.json({ comment: comment, post: post, user, user });
+                })
+                .catch((err) => {
+                  return res.send("Error occured: ", err);
+                });
+            })
+            .catch((err) => {
+              return res.send("Error occured: ", err);
+            });
+        })
+        .catch((err) => {
+          return res.send("Error occured: ", err);
+        });
+    })
+    .catch((err) => {
+      return res.status(500).send("Authentication Error");
+    });
+});
+
+router.get("/posts/:id", (req, res) => {
+  id = req.params.id;
+  Post.findOne({ _id: id })
+    .then((post) => {
+      result = {
+        title: post.title,
+        description: post.description,
+        likes: post.likes,
+        comments: [],
+      };
+      Comment.find({ createdFor: id })
+        .then((comments) => {
+          result.comments = comments.map((comment) => {
+            return {
+              title: comment.title,
+              description: comment.description,
+            };
+          });
+          return res.json(result);
+        })
+        .catch((err) => {
+          return res.send(err);
+        });
+    })
+    .catch((err) => {
+      return res.send(err);
+    });
+});
+
+router.get("/all_posts", (req, res) => {
+  getAuth(req.body.token)
+    .then((auth) => {
+      console.log("Auth: ", auth);
+      if (auth.status !== "Successfully Verified") {
+        return res.status(401).send("Authentication Error!");
+      }
+      Post.find({ createdBy: auth.id })
+        .then((posts) => {
+          finalResult = posts.map((post) => {
+            result = {
+              id: post._id,
+              title: post.title,
+              description: post.description,
+              likes: post.likes,
+              createdAt: post.createdAt,
+              comments: [],
+            };
+
+            Comment.find({ createdFor: post.id })
+              .then((comments) => {
+                result.comments = comments.map((comment) => {
+                  return {
+                    title: comment.title,
+                    description: comment.description,
+                  };
+                });
+                return result
+              })
+              .catch((err) => {
+                console.log("err",err)
+                return res.send(err);
+              });
+              return result
+          });
+          res.json(finalResult)
+        })
+        .catch((err) => {
+          return res.send(err);
+        });
+    })
+    .catch((err) => {
+      return res.status(500).send("Authentication Error");
+    });
 });
 
 module.exports = router;

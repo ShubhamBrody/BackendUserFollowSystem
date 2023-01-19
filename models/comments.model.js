@@ -8,4 +8,4 @@ const commentSchema = new mongoose.Schema({
     createdAt: Date,
 });
 
-module.exports = mongoose.model('Comments', commentSchema, 'User follow system')
+module.exports = mongoose.model('Comments', commentSchema, 'Comments system')

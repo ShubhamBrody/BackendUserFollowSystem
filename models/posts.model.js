@@ -9,4 +9,4 @@ const postSchema = new mongoose.Schema({
     likes: Number,
 });
 
-module.exports = mongoose.model('Posts', postSchema, 'User follow system')
+module.exports = mongoose.model('Posts', postSchema, 'Posts System')
