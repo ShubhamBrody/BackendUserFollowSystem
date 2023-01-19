@@ -404,19 +404,6 @@ router.post("/unlike/:id", (req, res) => {
     });
 });
 
-// id = req.params.id;
-//   getAuth(req.body.token)
-//     .then((auth) => {
-//       console.log("Auth: ", auth);
-//       if (auth.status !== "Successfully Verified") {
-//         return res.status(401).send("Authentication Error!");
-//       }
-
-//     })
-//     .catch((err) => {
-//       return res.status(500).send("Authentication Error");
-//     });
-
 router.post("/comment/:id", (req, res) => {
   id = req.params.id;
   getAuth(req.body.token)
@@ -501,8 +488,10 @@ router.get("/all_posts", (req, res) => {
       }
       Post.find({ createdBy: auth.id })
         .then((posts) => {
-          finalResult = posts.map((post) => {
-            result = {
+          listPost = []
+          finalResult = {}
+          posts.forEach((post) => {
+            finalResult[post._id] = {
               id: post._id,
               title: post.title,
               description: post.description,
@@ -510,26 +499,27 @@ router.get("/all_posts", (req, res) => {
               createdAt: post.createdAt,
               comments: [],
             };
-
-            Comment.find({ createdFor: post.id })
-              .then((comments) => {
-                result.comments = comments.map((comment) => {
-                  return {
-                    title: comment.title,
-                    description: comment.description,
-                  };
+            listPost.push(post._id)
+          })
+          Comment.find({ createdFor: listPost })
+            .then((comments) => {
+              console.log("COMMENTS: ", comments);
+              comments.forEach((comment, index) => {
+                finalResult[comment.createdFor].comments.push({
+                  title: comment.title,
+                  description: comment.description,
+                  createdAt: comment.createdAt,
                 });
-                return result
-              })
-              .catch((err) => {
-                console.log("err",err)
-                return res.send(err);
               });
-              return result
-          });
-          res.json(finalResult)
+              return res.json(finalResult);
+            })
+            .catch((err) => {
+              console.log(err)
+              return res.send(err);
+            });
         })
         .catch((err) => {
+          console.log(err)
           return res.send(err);
         });
     })
