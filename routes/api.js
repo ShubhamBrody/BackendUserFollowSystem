@@ -3,9 +3,9 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const mongoose = require("mongoose");
-const User = require("./models/users.model");
-const Post = require("./models/posts.model");
-const Comment = require("./models/comments.model");
+const User = require("../models/users.model");
+const Post = require("../models/posts.model");
+const Comment = require("../models/comments.model");
 
 mongoose
   .connect(process.env.MONGODB_URL)
