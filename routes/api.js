@@ -19,7 +19,7 @@ async function getAuth(token) {
   finaldata = { status: "Not Verified" };
   await axios
     .post(
-      "http://localhost:3000/api/user/",
+      "https://backendnodeassignment.onrender.com/api/user/",
       {},
       {
         headers: { TOKEN_HEADER: token },
